@@ -4,7 +4,7 @@ import { Trophy, RotateCcw, Play } from 'lucide-react';
 const GRID_SIZE = 20;
 const INITIAL_SNAKE = [{ x: 10, y: 10 }];
 const INITIAL_DIRECTION = { x: 0, y: -1 };
-const BASE_SPEED = 150;
+const BASE_SPEED = 80;
 
 type Point = { x: number; y: number };
 
@@ -138,28 +138,26 @@ export default function SnakeGame() {
       });
     };
 
-    const speed = Math.max(50, BASE_SPEED - Math.floor(score / 50) * 10);
+    const speed = Math.max(30, BASE_SPEED - Math.floor(score / 50) * 5);
     const intervalId = setInterval(moveSnake, speed);
 
     return () => clearInterval(intervalId);
   }, [direction, food, isGameOver, isPaused, score, generateFood]);
 
   return (
-    <div className="flex flex-col items-center w-full max-w-2xl mx-auto">
+    <div className="flex flex-col items-center w-full">
       {/* Score Board */}
-      <div className="flex justify-between items-center w-full mb-6 px-6 py-3 bg-black/60 border border-cyan-500/30 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.2)] backdrop-blur-md">
+      <div className="flex justify-between items-center w-full mb-4 px-4 py-2 bg-black border-4 border-fuchsia-500">
         <div className="flex flex-col">
-          <span className="text-cyan-500/70 font-mono text-xs uppercase tracking-wider">Score</span>
-          <span className="text-cyan-400 font-mono text-2xl font-bold drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
+          <span className="text-cyan-400 font-pixel text-xs md:text-sm mb-1">DATA_COLLECTED</span>
+          <span className="text-fuchsia-500 font-pixel text-2xl md:text-3xl">
             {score.toString().padStart(4, '0')}
           </span>
         </div>
         
         <div className="flex flex-col items-end">
-          <span className="text-yellow-500/70 font-mono text-xs uppercase tracking-wider flex items-center gap-1">
-            <Trophy size={12} /> High Score
-          </span>
-          <span className="text-yellow-400 font-mono text-2xl font-bold drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]">
+          <span className="text-cyan-400 font-pixel text-xs md:text-sm mb-1">MAX_CAPACITY</span>
+          <span className="text-fuchsia-500 font-pixel text-2xl md:text-3xl">
             {highScore.toString().padStart(4, '0')}
           </span>
         </div>
@@ -168,37 +166,46 @@ export default function SnakeGame() {
       {/* Game Board */}
       <div 
         ref={boardRef}
-        className="relative bg-black/90 border-2 border-cyan-500/50 rounded-lg p-1 shadow-[0_0_30px_rgba(6,182,212,0.3)] outline-none"
+        className="relative bg-black border-4 border-cyan-400 p-1 outline-none w-full flex justify-center"
         tabIndex={0}
       >
         <div 
-          className="grid gap-[1px] bg-cyan-950/30"
+          className="grid gap-0 bg-black"
           style={{ 
             gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
-            width: 'min(80vw, 400px)',
-            height: 'min(80vw, 400px)'
+            width: 'min(100%, 600px)',
+            aspectRatio: '1 / 1'
           }}
         >
           {Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, i) => {
             const x = i % GRID_SIZE;
             const y = Math.floor(i / GRID_SIZE);
             
-            const isSnakeHead = snake[0].x === x && snake[0].y === y;
-            const isSnakeBody = snake.some((segment, idx) => idx !== 0 && segment.x === x && segment.y === y);
+            const snakeIndex = snake.findIndex(segment => segment.x === x && segment.y === y);
+            const isSnakeHead = snakeIndex === 0;
+            const isSnakeBody = snakeIndex > 0;
             const isFood = food.x === x && food.y === y;
+            
+            let cellClass = 'w-full h-full ';
+            let cellStyle: React.CSSProperties = {};
+
+            if (isSnakeHead) {
+              cellClass += 'bg-fuchsia-500 z-10 shadow-[0_0_15px_#ff00ff]';
+            } else if (isSnakeBody) {
+              const opacity = Math.max(0.15, 1 - (snakeIndex / snake.length));
+              cellClass += 'bg-fuchsia-500 shadow-[0_0_10px_#ff00ff]';
+              cellStyle = { opacity };
+            } else if (isFood) {
+              cellClass += 'bg-cyan-400 animate-pulse shadow-[0_0_15px_#00ffff]';
+            } else {
+              cellClass += 'bg-transparent border border-cyan-900/40';
+            }
 
             return (
               <div 
                 key={i} 
-                className={`w-full h-full rounded-sm transition-all duration-75 ${
-                  isSnakeHead 
-                    ? 'bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)] z-10' 
-                    : isSnakeBody 
-                      ? 'bg-cyan-600/80 shadow-[0_0_5px_rgba(8,145,178,0.5)]' 
-                      : isFood 
-                        ? 'bg-fuchsia-500 shadow-[0_0_12px_rgba(217,70,239,0.9)] animate-pulse rounded-full scale-75' 
-                        : 'bg-transparent'
-                }`}
+                className={cellClass}
+                style={cellStyle}
               />
             );
           })}
@@ -206,37 +213,31 @@ export default function SnakeGame() {
 
         {/* Overlays */}
         {(isGameOver || isPaused) && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center rounded-lg z-20">
+          <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 border-4 border-fuchsia-500 m-2">
             {isGameOver ? (
               <>
-                <h2 className="text-red-500 font-mono text-4xl font-bold mb-2 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] uppercase tracking-widest">
-                  Game Over
+                <h2 className="text-fuchsia-500 font-pixel text-2xl md:text-5xl mb-6 glitch text-center" data-text="SYSTEM_FAILURE">
+                  SYSTEM_FAILURE
                 </h2>
-                <p className="text-cyan-100 font-mono mb-6">Final Score: {score}</p>
+                <p className="text-cyan-400 font-terminal text-3xl mb-10">{'>'} FINAL_DATA: {score}</p>
                 <button 
                   onClick={resetGame}
-                  className="flex items-center gap-2 px-6 py-3 bg-cyan-600 text-white font-mono uppercase tracking-wider rounded-full hover:bg-cyan-500 hover:shadow-[0_0_20px_rgba(6,182,212,0.6)] transition-all"
+                  className="px-6 py-4 bg-cyan-400 text-black font-pixel text-xl hover:bg-fuchsia-500 hover:text-white transition-colors border-2 border-transparent hover:border-cyan-400"
                 >
-                  <RotateCcw size={18} /> Play Again
+                  [ REBOOT_SEQUENCE ]
                 </button>
               </>
             ) : (
               <>
-                <h2 className="text-cyan-400 font-mono text-3xl font-bold mb-6 drop-shadow-[0_0_15px_rgba(34,211,238,0.8)] uppercase tracking-widest">
-                  {snake.length > 1 ? 'Paused' : 'Ready?'}
+                <h2 className="text-cyan-400 font-pixel text-2xl md:text-5xl mb-10 glitch text-center" data-text={snake.length > 1 ? 'HALTED' : 'AWAITING_INPUT'}>
+                  {snake.length > 1 ? 'HALTED' : 'AWAITING_INPUT'}
                 </h2>
                 <button 
                   onClick={() => setIsPaused(false)}
-                  className="flex items-center gap-2 px-8 py-4 bg-cyan-600 text-white font-mono uppercase tracking-wider rounded-full hover:bg-cyan-500 hover:shadow-[0_0_20px_rgba(6,182,212,0.6)] transition-all"
+                  className="px-8 py-4 bg-fuchsia-500 text-black font-pixel text-2xl hover:bg-cyan-400 hover:text-black transition-colors border-2 border-transparent hover:border-fuchsia-500"
                 >
-                  <Play size={20} className="ml-1" /> Start
+                  [ EXECUTE ]
                 </button>
-                <p className="text-cyan-500/60 font-mono text-xs mt-6 uppercase tracking-widest text-center">
-                  Use Arrow Keys or WASD to move
-                </p>
-                <p className="text-cyan-500/60 font-mono text-xs mt-2 uppercase tracking-widest">
-                  Space to pause
-                </p>
               </>
             )}
           </div>
